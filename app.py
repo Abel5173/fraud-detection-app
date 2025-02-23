@@ -3,10 +3,22 @@ import h2o
 import pandas as pd
 from h2o.frame import H2OFrame
 
-h2o.init()
-model_path = "XGBoost_grid_1_AutoML_1_20250223_170838_model_2"  
-model = h2o.load_model(model_path)
+# Initialize H2O with explicit settings
+try:
+    h2o.init(port=54321, max_mem_size="256m", start_h2o=True, strict_version_check=False, min_mem_size="128m")
+except Exception as e:
+    st.error(f"H2O initialization failed: {e}")
+    raise
 
+# Load the trained fraud detection model
+model_path = "XGBoost_grid_1_AutoML_1_20250223_170838_model_2"
+try:
+    model = h2o.load_model(model_path)
+except Exception as e:
+    st.error(f"Model loading failed: {e}")
+    raise
+
+# Streamlit UI
 st.title("🔍 Credit Card Fraud Detection")
 st.write("Enter transaction details to check for fraud risk.")
 
@@ -27,14 +39,17 @@ def user_input():
 input_data = user_input()
 
 if st.button("Detect Fraud"):
-    h2o_data = H2OFrame(input_data)
-    prediction = model.predict(h2o_data)
-    pred_df = prediction.as_data_frame()
-    fraud_prob = pred_df["p1"][0]
-    fraud_label = 1 if fraud_prob > 0.5 else 0
-    st.write("### Prediction Result:")
-    st.write(f"Fraud Probability: {fraud_prob:.2%}")
-    if fraud_label == 1:
-        st.error("🚨 Fraudulent Transaction Detected!")
-    else:
-        st.success("✅ Transaction is Legitimate.")
+    try:
+        h2o_data = H2OFrame(input_data)
+        prediction = model.predict(h2o_data)
+        pred_df = prediction.as_data_frame()
+        fraud_prob = pred_df["p1"][0]
+        fraud_label = 1 if fraud_prob > 0.5 else 0
+        st.write("### Prediction Result:")
+        st.write(f"Fraud Probability: {fraud_prob:.2%}")
+        if fraud_label == 1:
+            st.error("🚨 Fraudulent Transaction Detected!")
+        else:
+            st.success("✅ Transaction is Legitimate.")
+    except Exception as e:
+        st.error(f"Prediction failed: {e}")
